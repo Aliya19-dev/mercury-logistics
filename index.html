@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RouteFlow Live Tracking</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+  <style>
+    body { margin: 0; font-family: Arial; }
+
+    #map { height: 100vh; }
+
+    .sidebar {
+      position: fixed;
+      left: -220px;
+      top: 0;
+      width: 220px;
+      height: 100%;
+      background: #111;
+      color: white;
+      padding: 20px;
+      transition: left 0.3s ease;
+      z-index: 1000;
+    }
+
+    .sidebar:hover {
+      left: 0;
+    }
+
+    .login-box {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      z-index: 2000;
+    }
+
+    input, button {
+      display: block;
+      margin: 10px 0;
+      padding: 10px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <h2>RouteFlow</h2>
+  <p id="userRole">Not logged in</p>
+</div>
+
+<div id="map"></div>
+
+<div class="login-box" id="loginBox">
+  <h3>Login</h3>
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="password" placeholder="Password" />
+  <button onclick="login()">Login</button>
+</div>
+
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyC2N4rjxfdsjs0UV-LR7iZPgKWJWwvUVQw",
+    authDomain: "mercury01-7b46d.firebaseapp.com",
+    projectId: "mercury01-7b46d",
+    storageBucket: "mercury01-7b46d.firebasestorage.app",
+    messagingSenderId: "530695335327",
+    appId: "1:530695335327:web:30502629600c85ff86e1aa"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+
+  // Map setup
+  const map = L.map('map').setView([20, 0], 2);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  const driverMarkers = {};
+
+  // Login
+  async function login() {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+
+  try {
+    const userCred = await auth.signInWithEmailAndPassword(email, password);
+    const uid = userCred.user.uid;
+
+    console.log("Logged in UID:", uid);
+
+    const doc = await db.collection("users").doc(uid).get();
+
+    if (!doc.exists) {
+      alert("No Firestore user found. Did you create it?");
+      return;
+    }
+
+    const user = doc.data();
+    console.log("User data:", user);
+
+    document.getElementById('userRole').innerText = user.role;
+    document.getElementById('loginBox').style.display = 'none';
+
+    if (user.role === 'driver') {
+      startTracking(uid);
+    }
+
+    listenForDrivers();
+
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  }
+}
+  // Driver tracking
+  function startTracking(driverId) {
+    navigator.geolocation.watchPosition((pos) => {
+      const { latitude, longitude } = pos.coords;
+
+      db.collection("locations").doc(driverId).set({
+        lat: latitude,
+        lng: longitude,
+        updatedAt: Date.now()
+      });
+    });
+  }
+
+  // Listen for drivers (real-time)
+  function listenForDrivers() {
+    db.collection("locations").onSnapshot(snapshot => {
+      snapshot.forEach(doc => {
+        const d = doc.data();
+        updateDriverMarker(doc.id, d.lat, d.lng);
+      });
+    });
+  }
+
+  // Update marker
+  function updateDriverMarker(id, lat, lng) {
+    if (!driverMarkers[id]) {
+      driverMarkers[id] = L.marker([lat, lng]).addTo(map);
+    } else {
+      driverMarkers[id].setLatLng([lat, lng]);
+    }
+  }
+</script>
+
+</body>
+</html>
