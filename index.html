@@ -146,24 +146,49 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
 const markers = {};
 
-async function login(){
-  const email = emailEl.value;
-  const password = passwordEl.value;
+document.getElementById("loginBtn").addEventListener("click", login);
 
-  try{
-    const res = await auth.signInWithEmailAndPassword(email,password);
+async function login() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+
+  console.log("Login clicked", email);
+
+  if (!email || !password) {
+    alert("Enter email and password");
+    return;
+  }
+
+  try {
+    const res = await auth.signInWithEmailAndPassword(email, password);
     const uid = res.user.uid;
 
+    console.log("Logged in:", uid);
+
     const doc = await db.collection("users").doc(uid).get();
+
+    if (!doc.exists) {
+      alert("No Firestore user found");
+      return;
+    }
+
     const user = doc.data();
 
-    userInfo.innerText = user.name + " ("+user.role+")";
-    loginBox.style.display = 'none';
+    document.getElementById("userInfo").innerText =
+      user.name + " (" + user.role + ")";
 
-    if(user.role==='driver') startTracking(uid);
+    document.getElementById("loginBox").style.display = "none";
+
+    if (user.role === "driver") {
+      startTracking(uid);
+    }
+
     listenDrivers();
 
-  }catch(e){ alert(e.message); }
+  } catch (e) {
+    console.error(e);
+    alert(e.message);
+  }
 }
 
 function startTracking(id){
