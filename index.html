@@ -1,96 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Mercury Logistics Platform</title>
+<meta charset="UTF-8" />
+<title>Mercury Logistics Platform</title>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
-  <style>
-    body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0c5c5c; }
-    #map { height: 100vh; }
+<style>
+body { margin:0; font-family:'Segoe UI'; background:#0c5c5c; }
+#map { height:100vh; }
 
-    .topbar {
-      position: fixed;
-      top: 0;
-      width: 100%;
-      height: 60px;
-      background: #f88973;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
-      z-index: 1000;
-    }
+.topbar{
+  position:fixed; top:0; width:100%; height:60px;
+  background:#f88973; color:white;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 20px; z-index:1000;
+}
 
-    .sidebar {
-      position: fixed;
-      top: 60px;
-      left: -260px;
-      width: 260px;
-      height: calc(100% - 60px);
-      background: #c5cbcb;
-      padding: 15px;
-      transition: left 0.3s ease;
-      overflow-y: auto;
-      z-index: 999;
-    }
+.sidebar{
+  position:fixed; top:60px; left:-280px;
+  width:280px; height:calc(100% - 60px);
+  background:#c5cbcb; padding:15px;
+  transition:0.3s; overflow-y:auto; z-index:999;
+}
+.sidebar:hover{ left:0; }
 
-    .sidebar:hover { left: 0; }
+.driver-card{
+  background:white; border-radius:10px;
+  padding:12px; margin-bottom:10px;
+  border-left:6px solid #f88973;
+  cursor:pointer;
+}
+.driver-card:hover{ background:#fff074; }
 
-    .driver-card {
-      background: white;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      border-left: 5px solid #f88973;
-    }
+.status{ font-size:12px; color:#666; }
 
-    .driver-card:hover { background: #fff074; }
+.dashboard{
+  position:fixed;
+  right:20px; top:80px;
+  width:300px;
+  background:white;
+  border-radius:15px;
+  padding:20px;
+  box-shadow:0 8px 25px rgba(0,0,0,0.25);
+  z-index:1000;
+}
 
-    .status { font-size: 12px; color: gray; }
+.dashboard h3{
+  margin-top:0;
+  color:#f88973;
+}
 
-    .login-box {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-      z-index: 2000;
-    }
+.metric{
+  margin-bottom:15px;
+}
 
-    input, button {
-      display: block;
-      margin: 10px 0;
-      padding: 10px;
-      width: 100%;
-    }
+.metric span{
+  font-size:22px;
+  font-weight:bold;
+}
 
-    button {
-      background: #f88973;
-      border: none;
-      color: white;
-      cursor: pointer;
-      border-radius: 6px;
-    }
-  </style>
+.progress{
+  height:10px;
+  background:#eee;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+.progress-bar{
+  height:100%;
+  background:#f88973;
+  width:0%;
+}
+
+.alert{
+  background:#fff074;
+  padding:10px;
+  border-radius:8px;
+  margin-top:10px;
+}
+
+.login-box{
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  background:white; padding:25px; border-radius:12px;
+  box-shadow:0 5px 20px rgba(0,0,0,0.3);
+  z-index:2000;
+}
+
+input,button{
+  width:100%; padding:10px; margin:10px 0;
+}
+button{ background:#f88973; color:white; border:none; border-radius:6px; cursor:pointer; }
+</style>
 </head>
 <body>
 
 <div class="topbar">
-  <h1>Mercury Logistics Platform</h1>
+  <h2>Mercury Logistics Platform</h2>
   <div id="userInfo">Not logged in</div>
 </div>
 
@@ -99,120 +110,110 @@
   <div id="driverList"></div>
 </div>
 
+<div class="dashboard">
+  <h3>Live Dashboard</h3>
+
+  <div class="metric">Active Drivers: <span id="activeDrivers">0</span></div>
+  <div class="metric">Total Drivers: <span id="totalDrivers">0</span></div>
+
+  <div class="metric">Fleet Activity</div>
+  <div class="progress"><div class="progress-bar" id="activityBar"></div></div>
+
+  <div class="alert" id="alertBox">No alerts</div>
+</div>
+
 <div id="map"></div>
 
 <div class="login-box" id="loginBox">
   <h3>Login</h3>
-  <input type="email" id="email" placeholder="Email" />
-  <input type="password" id="password" placeholder="Password" />
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
   <button onclick="login()">Login</button>
 </div>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyC2N4rjxfdsjs0UV-LR7iZPgKWJWwvUVQw",
-    authDomain: "mercury01-7b46d.firebaseapp.com",
-    projectId: "mercury01-7b46d",
-    storageBucket: "mercury01-7b46d.firebasestorage.app",
-    messagingSenderId: "530695335327",
-    appId: "1:530695335327:web:30502629600c85ff86e1aa"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyC2N4rjxfdsjs0UV-LR7iZPgKWJWwvUVQw",
+  authDomain: "mercury01-7b46d.firebaseapp.com",
+  projectId: "mercury01-7b46d"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const auth = firebase.auth();
+const map = L.map('map').setView([20,0],2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-  const map = L.map('map').setView([20, 0], 2);
+const markers = {};
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
+async function login(){
+  const email = emailEl.value;
+  const password = passwordEl.value;
 
-  const driverMarkers = {};
+  try{
+    const res = await auth.signInWithEmailAndPassword(email,password);
+    const uid = res.user.uid;
 
-  async function login() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+    const doc = await db.collection("users").doc(uid).get();
+    const user = doc.data();
 
-    if (!email || !password) {
-      alert("Enter email and password");
-      return;
-    }
+    userInfo.innerText = user.name + " ("+user.role+")";
+    loginBox.style.display = 'none';
 
-    try {
-      const userCred = await auth.signInWithEmailAndPassword(email, password);
-      const uid = userCred.user.uid;
+    if(user.role==='driver') startTracking(uid);
+    listenDrivers();
 
-      const doc = await db.collection("users").doc(uid).get();
+  }catch(e){ alert(e.message); }
+}
 
-      if (!doc.exists) {
-        alert("No Firestore user doc");
-        return;
-      }
-
-      const user = doc.data();
-
-      document.getElementById('userInfo').innerText = user.name + " (" + user.role + ")";
-      document.getElementById('loginBox').style.display = 'none';
-
-      if (user.role === 'driver') {
-        startTracking(uid);
-      }
-
-      listenForDrivers();
-
-    } catch (err) {
-      alert(err.message);
-    }
-  }
-
-  function startTracking(driverId) {
-    navigator.geolocation.watchPosition((pos) => {
-      const { latitude, longitude } = pos.coords;
-
-      db.collection("locations").doc(driverId).set({
-        lat: latitude,
-        lng: longitude,
-        updatedAt: Date.now()
-      });
+function startTracking(id){
+  navigator.geolocation.watchPosition(pos=>{
+    db.collection("locations").doc(id).set({
+      lat:pos.coords.latitude,
+      lng:pos.coords.longitude,
+      updatedAt:Date.now()
     });
-  }
+  });
+}
 
-  function listenForDrivers() {
-    db.collection("locations").onSnapshot(snapshot => {
-      const driverList = document.getElementById('driverList');
-      driverList.innerHTML = "";
+function listenDrivers(){
+  db.collection("locations").onSnapshot(snap=>{
+    let active=0;
+    let total=0;
+    driverList.innerHTML='';
 
-      snapshot.forEach(doc => {
-        const d = doc.data();
-        const id = doc.id;
+    snap.forEach(doc=>{
+      const d=doc.data();
+      total++;
+      const online = Date.now()-d.updatedAt<10000;
+      if(online) active++;
 
-        updateDriverMarker(id, d.lat, d.lng);
+      updateMarker(doc.id,d.lat,d.lng);
 
-        const card = document.createElement('div');
-        card.className = 'driver-card';
-
-        const isOnline = Date.now() - d.updatedAt < 10000;
-
-        card.innerHTML = `
-          <strong>${id}</strong>
-          <div class="status">${isOnline ? 'Online' : 'Offline'}</div>
-        `;
-
-        card.onclick = () => map.setView([d.lat, d.lng], 15);
-
-        driverList.appendChild(card);
-      });
+      const card=document.createElement('div');
+      card.className='driver-card';
+      card.innerHTML=`<b>${doc.id}</b><div class='status'>${online?'Online':'Offline'}</div>`;
+      card.onclick=()=>map.setView([d.lat,d.lng],15);
+      driverList.appendChild(card);
     });
-  }
 
-  function updateDriverMarker(id, lat, lng) {
-    if (!driverMarkers[id]) {
-      driverMarkers[id] = L.marker([lat, lng]).addTo(map);
-    } else {
-      driverMarkers[id].setLatLng([lat, lng]);
-    }
+    activeDrivers.innerText=active;
+    totalDrivers.innerText=total;
+
+    const percent = total ? (active/total)*100 : 0;
+    activityBar.style.width = percent+'%';
+
+    alertBox.innerText = active===total ? 'All drivers active' : 'Some drivers offline';
+  });
+}
+
+function updateMarker(id,lat,lng){
+  if(!markers[id]){
+    markers[id]=L.marker([lat,lng]).addTo(map);
+  }else{
+    markers[id].setLatLng([lat,lng]);
   }
+}
 </script>
 
 </body>
